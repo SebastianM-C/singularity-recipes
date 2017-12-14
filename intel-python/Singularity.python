@@ -17,8 +17,8 @@ From: ubuntu
       	wget http://apt.repos.intel.com/setup/intelproducts.list -O /etc/apt/sources.list.d/intelproducts.list
       	apt-get update
       	apt-get install -y intel-mkl-64bit-2018.1-038
-      	apt-get install -y intel-ipp-64bit-2018.1-038
-      	# apt-get install -y intel-tbb-2017.0-033
-      	# apt-get install -y intel-daal-64bit-2017.1-038
+        # apt-get install -y intel-ipp-64bit-2018.1-038
+      	# apt-get install -y intel-tbb-2018.0-033
+      	# apt-get install -y intel-daal-64bit-2018.1-038
       	apt-get install -y intelpython3
 
