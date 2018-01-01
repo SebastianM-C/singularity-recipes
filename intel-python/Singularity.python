@@ -24,3 +24,4 @@ From: ubuntu
         # Workaround
         wget https://apt.repos.intel.com/intelpython/binary/intelpython3-2018.1-023_amd64.deb
         dpkg -i ./intelpython3-2018.1-023_amd64.deb
+        rm ./intelpython3-2018.1-023_amd64.deb
