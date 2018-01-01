@@ -6,6 +6,7 @@ From: fedora:latest
 	export JULIA_PKGDIR
 
 %runscript
+	export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
 	exec /usr/bin/julia "$@"
 
 %post
