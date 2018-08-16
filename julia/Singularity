@@ -1,43 +1,53 @@
 Bootstrap: docker
-From: fedora:latest
+From: julia:0.7
 
 %environment
-	JULIA_PKGDIR=/mnt/singularity/.julia
-	export JULIA_PKGDIR
+	JULIA_DEPOT_PATH=/mnt/storage/.julia
+	PYTHON=/usr/lib/x86_64-linux-gnu/
+        export JULIA_DEPOT_PATH
+	export PYTHON
+        export XDG_RUNTIME_DIR=""
 
 %runscript
-	export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
-	exec /usr/bin/julia "$@"
+        export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
+        exec /usr/local/julia/bin/julia -O 3 "$@"
 
 %post
-	yum -y groupinstall "Development Tools"
-	yum -y install which bzip2
-	yum -y install gcc gcc-c++ make cmake openmpi openmpi-devel
-	yum -y install yum-utils
-	dnf -y install copr-cli
-	dnf -y install dnf-plugins-core
-	dnf -y copr enable dperson/neovim
-	dnf -y install neovim
-	echo "Installing LaTeX"
-	yum -y install texlive-scheme-gust
-	yum -y install texlive-scheme-tetex
-	yum -y install texlive-collection-latexextra
-	yum -y install texlive-collection-genericextra
-	yum -y install texlive-collection-publishers
-	yum -y install texlive-collection-mathextra
-	yum -y install texlive-collection-pictures
-	yum -y install texlive-collection-science
-	yum -y install texlive-ctablestack
-	yum -y install texlive-collection-luatex
-	echo "Installing Python"
-	dnf -y install python3-numpy python3-scipy python3-matplotlib python3-ipython python3-pandas python3-sympy python3-nose atlas-devel notebook
-	dnf -y install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-	dnf -y install ffmpeg
-	echo "Installing julia"
-	dnf -y copr enable nalimilan/julia
-	yum -y install julia
-	yum -y install cairo gtk3 ImageMagick
-	yum -y install hdf5
-	dnf -y install czmq-devel
-	yum -y install pdf2svg
+	apt update
+	apt install -y python3 python3-pip \
+		vim \
+		ffmpeg hdf5-tools libcairo2 pdf2svg imagemagick \
+		libczmq-dev
+
+	# Other dependencies
+#        yum -y install cairo pdf2svg gtk3 ImageMagick poppler-utils
+#        yum -y install gettext-libs gsl-devel
+
+        # Python
+#        dnf -y install python3-numpy python3-scipy python3-matplotlib python3-ipython \
+#                python3-pandas python3-sympy python3-nose atlas-devel notebook
+
+	# JuptyerLab (experimental)
+        pip3 install jupyterlab
+
+        # LaTeX
+        apt install -y texlive-latex-base \
+		texlive-latex-recommended \
+                texlive-luatex \
+                texlive-generic-extra \
+                texlive-science
+
+	# MS fonts
+	echo \
+"deb http://deb.debian.org/debian stretch main contrib non-free
+deb-src http://deb.debian.org/debian stretch main contrib non-free
+
+deb http://security.debian.org/debian-security/ stretch/updates main contrib non-free
+deb-src http://security.debian.org/debian-security/ stretch/updates main contrib non-free
+
+deb http://deb.debian.org/debian stretch-updates main contrib non-free
+deb-src http://deb.debian.org/debian stretch-updates main contrib non-free" \
+	> /etc/apt/sources.list
+	apt update
+	apt install -y msttcorefonts
 
