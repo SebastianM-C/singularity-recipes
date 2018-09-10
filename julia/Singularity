@@ -7,6 +7,7 @@ From: julia:1.0
         export JULIA_DEPOT_PATH
 	export PYTHON
         export XDG_RUNTIME_DIR=""
+	export DISPLAY=:0
 
 %runscript
         export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
@@ -15,9 +16,10 @@ From: julia:1.0
 %post
 	apt update
 	apt install -y python3 python3-pip \
-		vim \
+		ssh vim \
 		ffmpeg hdf5-tools libcairo2 pdf2svg imagemagick \
-		libczmq-dev cmake xorg-dev
+		libczmq-dev cmake xorg-dev \
+		mesa-utils libxrandr-dev libxinerama-dev libxcursor-dev
 
 	# Other dependencies
 #        yum -y install gettext-libs gsl-devel
