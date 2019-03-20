@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: julia:1.0
+From: julia:1.1
 
 %environment
 	JULIA_DEPOT_PATH=/mnt/storage/.julia
@@ -7,11 +7,13 @@ From: julia:1.0
   export JULIA_DEPOT_PATH
   export PYTHON
   export XDG_RUNTIME_DIR=""
-  export DISPLAY=:0
+  export PATH=/usr/local/cuda/bin:$PATH
+  export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 %runscript
   export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
-  exec xvfb-run --auto-servernum /usr/local/julia/bin/julia -O 3 --project "$@"
+#  exec xvfb-run --auto-servernum /usr/local/julia/bin/julia -O 3 --project "$@"
+  exec -B /mnt/storage /usr/local/julia/bin/julia -O 3 --project "$@"
 
 %post
 	apt update
@@ -20,7 +22,7 @@ From: julia:1.0
 		ffmpeg hdf5-tools libcairo2 pdf2svg imagemagick \
 		libczmq-dev cmake xorg-dev dvipng libxt6 libxrender1 \
 		mesa-utils libxrandr-dev libxinerama-dev libxcursor-dev \
-		libgl1-mesa-glx libqt5widgets5 xvfb
+		libgl1-mesa-glx libqt5widgets5 gettext gettext-base
 
 	# JuptyerLab (experimental)
   pip3 install jupyterlab
