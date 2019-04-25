@@ -1,0 +1,10 @@
+BootStrap: docker
+From: centos
+
+%post
+	yum -y update
+	yum -y install wget
+	cd /etc/yum.repos.d/
+	wget https://virtualgl.org/pmwiki/uploads/Downloads/VirtualGL.repo
+	yum -y update
+	yum -y install glx-utils mesa-dri-drivers VirtualGL
