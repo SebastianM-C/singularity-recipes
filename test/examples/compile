@@ -1,0 +1,1 @@
+gcc -o simple simple.c ../deps/glad_gl.c -I ../deps -lglfw -lGL -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread -ldl
