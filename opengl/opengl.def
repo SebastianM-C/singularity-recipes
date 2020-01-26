@@ -3,7 +3,9 @@ From: centos
 
 %post
 	yum -y update
-	yum -y install wget
+	yum -y group install "Development Tools"
+	yum -y install wget openssh vim gdb strace epel-release
+	yum -y install glfw
 	cd /etc/yum.repos.d/
 	wget https://virtualgl.org/pmwiki/uploads/Downloads/VirtualGL.repo
 	yum -y update
