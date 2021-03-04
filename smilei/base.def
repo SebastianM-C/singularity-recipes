@@ -1,0 +1,34 @@
+BootStrap: localimage
+From: ../intel/parallel_studio.sif
+
+%post
+    yum -y update
+    yum install -y wget which findutils
+
+    PATH=/opt/intel/intelpython3/condabin/:$PATH
+    conda install -c intel ipython
+    conda install -c conda-forge jupyterlab sphinx h5py pint
+
+    export INSTALL_DIR=/opt
+    export PATH=${INSTALL_DIR}/hdf5/bin:${PATH}
+    export LD_LIBRARY_PATH=${INSTALL_DIR}/hdf5/lib:${LD_LIBRARY_PATH}
+    export HDF5_ROOT_DIR=${INSTALL_DIR}/hdf5
+
+    HDF5_VERSION=1.12.0
+    HDF5_VER=1.12
+    wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$HDF5_VER/hdf5-$HDF5_VERSION/src/hdf5-$HDF5_VERSION.tar.gz
+    tar -zxvf hdf5-$HDF5_VERSION.tar.gz
+    cd hdf5-$HDF5_VERSION
+    ./configure --prefix=${INSTALL_DIR}/hdf5 --enable-parallel --with-pic --enable-linux-lfs --enable-shared --enable-build-mode=production --disable-sharedlib-rpath --enable-static CC=mpicc FC=mpif90
+    make -j$(nproc)
+    make install
+    cd ..
+    rm hdf5-$HDF5_VERSION.tar.gz
+    rm -rf hdf5-$HDF5_VERSION
+
+%environment
+    export INSTALL_DIR=/opt
+    export PATH=${INSTALL_DIR}/hdf5/bin:${PATH}
+    export LD_LIBRARY_PATH=${INSTALL_DIR}/hdf5/lib:${LD_LIBRARY_PATH}
+    export HDF5_ROOT_DIR=${INSTALL_DIR}/hdf5
+    export PATH=/opt/intel/intelpython3/condabin/:$PATH

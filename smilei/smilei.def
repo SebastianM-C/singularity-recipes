@@ -1,0 +1,16 @@
+BootStrap: localimage
+From: base.sif
+
+%post
+    mkdir /opt/smilei
+    export SMILEICXX=mpiicc
+    export CXXFLAGS="-xHOST -c -ipo -inline-factor=1000"
+    export PYTHONEXE="/opt/intel/intelpython3/bin/python"
+    export SITEDIR="/opt/intel/intelpython3/lib/python3.7/site-packages"
+    wget https://smileipic.github.io/Smilei/_downloads/Smilei.tar.gz
+    tar -zxvf Smilei.tar.gz -C /opt/smilei
+    rm Smilei.tar.gz
+    cd /opt/smilei
+    make -j$(nproc)
+    make happi
+    mv /root/.local/lib/python3.7/site-packages/smilei.pth $SITEDIR/smilei.pth
