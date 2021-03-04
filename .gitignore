@@ -1,2 +1,3 @@
-*.simg
+*.nfs000*
 *.sif
+*.tar.gz

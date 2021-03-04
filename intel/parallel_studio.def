@@ -1,0 +1,29 @@
+Bootstrap: library
+From: centos:8
+
+%files
+    parallel_studio_xe_2020_update2_cluster_edition.tgz /opt/tmp/parallel_studio_xe_2020_update2_cluster_edition.tgz
+    /opt/intel/licenses/NCOM_L___S477-LK6GKXS3.lic /opt/intel/licenses/license.lic
+
+%post
+    TARBALL_VERSION=2020_update2
+    yum -y update
+    yum -y group install "Development Tools"
+    yum -y install wget tar gzip git man-db man-pages man gcc-gfortran which
+    # Deps
+    yum -y install kernel-devel kernel-headers \
+        libXScrnSaver alsa-lib gtk3 elfutils-libelf-devel
+
+    tar -x -f /opt/tmp/parallel_studio_xe_"$TARBALL_VERSION"_cluster_edition.tgz -C /var/tmp -z
+    sed -i -e 's/^#\?\(COMPONENTS\)=.*/\1=DEFAULTS/g' \
+        -e 's|^#\?\(PSET_INSTALL_DIR\)=.*|\1=/opt/intel|g' \
+        -e 's/^#\?\(ACCEPT_EULA\)=.*/\1=accept/g' \
+        -e 's/^#\?\(ACTIVATION_TYPE\)=.*/\1=license_file/g' \
+        -e 's|^#\?\(ACTIVATION_LICENSE_FILE\)=.*|\1=/opt/intel/licenses/license.lic|g' /var/tmp/parallel_studio_xe_"$TARBALL_VERSION"_cluster_edition/silent.cfg
+    cd /var/tmp/parallel_studio_xe_"$TARBALL_VERSION"_cluster_edition && ./install.sh --silent=silent.cfg
+    rm -rf /opt/tmp/parallel_studio_xe_"$TARBALL_VERSION"_cluster_edition.tgz /var/tmp/parallel_studio_xe_"$TARBALL_VERSION"_cluster_edition
+    rmdir /opt/tmp
+
+%environment
+    export LC_ALL=C
+    . /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh -arch intel64 -platform linux

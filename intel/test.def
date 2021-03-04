@@ -1,0 +1,9 @@
+Bootstrap: library
+From: centos
+
+%files
+    parallel_studio_xe_2020_update1_cluster_edition.tgz /opt/tmp/parallel_studio_xe_2020_update1_cluster_edition.tgz
+    /opt/intel/licenses/NCOM_L___S477-LK6GKXS3.lic /opt/intel/licenses/license.lic
+
+%post
+    ls -la  /opt/tmp
