@@ -1,0 +1,5 @@
+if [ -x "$(command -v singularity)" ]; then
+  singularity run --nv -B /mnt/storage --app visit /mnt/storage/singularity-recipes/epoch/visit.sif "$@"
+else
+  visit "$@"
+fi

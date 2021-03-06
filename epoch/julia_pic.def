@@ -1,0 +1,35 @@
+BootStrap: localimage
+From: base.sif
+
+%post
+	PATH=/opt/intel/intelpython3/bin/:$PATH
+	JULIA_PATH=/usr/local/julia
+
+	yum -y update
+	yum -y group install "Development Tools"
+	yum -y install wget openssh vim gdb strace epel-release
+
+	wget https://julialang-s3.julialang.org/bin/linux/x64/1.3/julia-1.3.0-linux-x86_64.tar.gz
+	mkdir "$JULIA_PATH"
+	tar -xvf julia-1.3.0-linux-x86_64.tar.gz -C "$JULIA_PATH" --strip-components 1
+
+	# GLFW
+	yum -y install glfw	xorg-x11-server-Xorg xorg-x11-server-common \
+		xorg-x11-server-devel xorg-x11-xkb-utils-devel libXinerama-devel \
+		xorg-x11-proto-devel xorg-x11-drv-libinput-devel libXrandr-devel \
+		libXcursor-devel libXi-devel mesa-libGLU
+
+%appinstall virtualgl
+	# cd /etc/yum.repos.d/
+	# wget https://virtualgl.org/pmwiki/uploads/Downloads/VirtualGL.repo
+ 	# yum -y update
+	yum -y install glx-utils mesa-dri-drivers libXtst libXv # VirtualGL
+	VGL_VERSION=2.6.3
+	wget https://sourceforge.net/projects/virtualgl/files/"$VGL_VERSION"/VirtualGL-"$VGL_VERSION".x86_64.rpm
+	yum -y localinstall VirtualGL-"$VGL_VERSION".x86_64.rpm
+
+%environment
+	LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+	export JULIA_DEPOT_PATH=/mnt/storage/$USER/.julia
+	JULIA_PATH=/usr/local/julia
+	PATH=/opt/intel/intelpython3/bin/:$JULIA_PATH/bin:$PATH

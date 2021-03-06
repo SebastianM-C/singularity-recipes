@@ -1,0 +1,600 @@
+BootStrap: localimage
+From: base.sif
+
+%post
+        EPOCH_VERSION=epoch-4.17.10
+        COMPILERVARS_ARCHITECTURE=intel64 COMPILERVARS_PLATFORM=linux . /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh
+        echo "ssh \${@:1:5} -B /mnt/storage \${@:6:\$#}" > /usr/local/bin/ssh_wrapper
+        chmod +x /usr/local/bin/ssh_wrapper
+
+        # LBBCS Deps
+        yum -y install boost boost-devel
+        FFTW_VERSION=3.3.9
+        wget http://www.fftw.org/fftw-$FFTW_VERSION.tar.gz
+        tar -xzvf fftw-$FFTW_VERSION.tar.gz
+        cd fftw-$FFTW_VERSION
+        ./configure --prefix=/opt/fftw
+        make -j $(nproc)
+        make install
+
+        cp -r /$EPOCH_VERSION/SDF /scif/apps/
+        cp -r /$EPOCH_VERSION/scripts /scif/apps/
+        mkdir /epoch1d
+        mkdir /epoch2d
+        mkdir /epoch3d
+
+###################### epoch1d ######################
+
+%appinstall epoch1d
+        cp -r /$EPOCH_VERSION/epoch1d/* $SCIF_APPROOT
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+        # Example input decks
+        cp -r /$EPOCH_VERSION/epoch1d/example_decks /scif/data/epoch1d/input
+        chmod +x /scif/data/epoch1d/input/example_decks
+        chmod --recursive +r /scif/data/epoch1d/input/example_decks
+
+%apprun epoch1d
+        echo "$1" | mpirun $SCIF_APPROOT/bin/epoch1d
+
+%apphelp epoch1d
+        EPOCH 1D compiled with default options. Run with
+        singularity run --app epoch1d [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 1 local process.
+
+        You can find example input decks in the /scif/data/epoch1d/input/example_decks folder.
+
+%applabels epoch1d
+        1D example_decks
+
+###################### epoch2d ######################
+
+%appinstall epoch2d
+        cp -r /$EPOCH_VERSION/epoch2d/* $SCIF_APPROOT
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+        # Example input decks
+        cp -r /$EPOCH_VERSION/epoch2d/example_decks /scif/data/epoch2d/input
+        chmod +x /scif/data/epoch2d/input/example_decks
+        chmod --recursive +r /scif/data/epoch2d/input/example_decks
+
+%apprun epoch2d
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d
+        EPOCH 2D compiled with default options. Run with
+        singularity run --app epoch2d [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+        You can find example input decks in the /scif/data/epoch2/input/example_decks folder.
+
+%applabels epoch2d
+        2D example_decks
+
+%appfiles epoch2d_lbcs
+        epoch_lbcs
+
+%appinstall epoch2d_lbcs
+        cp -r epoch_lbcs/* $SCIF_APPROOT
+
+        sed -i 's/DEFINES+=" -D EPOCH_3D:BOOL=ON"/DEFINES+=" -D EPOCH_3D:BOOL=OFF"/' build.sh
+        sed -i 's/DEFINES+=" -D EPOCH_2D:BOOL=OFF"/DEFINES+=" -D EPOCH_2D:BOOL=ON"/' build.sh
+        ./build.sh intel
+        ln -s `pwd`/epoch/epoch2d/bin/epoch2d `pwd`/bin/epoch2d
+
+%apprun epoch2d_lbcs
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_lbcs
+        EPOCH 2D compiled with laser boundary conditions for Gaussian beams. Run with
+        singularity run --app epoch2d_lbcs [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_lbcs
+        2D lbcs
+
+###################### epoch3d ######################
+
+%appinstall epoch3d
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+        # Example input decks
+        cp -r /$EPOCH_VERSION/epoch3d/example_decks /scif/data/epoch3d/input
+        chmod +x /scif/data/epoch3d/input/example_decks
+        chmod --recursive +r /scif/data/epoch3d/input/example_decks
+
+%apprun epoch3d
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d
+        EPOCH 3D compiled with default options. Run with
+        singularity run --app epoch3d [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+        You can find example input decks in the /scif/data/epoch3d/input/example_decks folder.
+
+%applabels epoch3d
+        3D example_decks
+
+%appinstall epoch3d_HC
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)HC_PUSH/DEFINES += $(D)HC_PUSH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_HC
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_HC
+        EPOCH 3D compiled with the Higuera-Cary push. Run with
+        singularity run --app epoch3d_HC [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_HCHigueraCary_push
+        3D HigueraCary_push
+
+%appfiles epoch3d_lbcs
+        epoch_lbcs
+
+%appinstall epoch3d_lbcs
+        cd epoch_lbcs
+        ./build.sh intel
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/bin/epoch3d $SCIF_APPROOT/bin/epoch3d
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/src $SCIF_APPROOT/src
+
+%apprun epoch3d_lbcs
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_lbcs
+        EPOCH 3D compiled with laser boundary conditions for Gaussian beams. Run with
+        singularity run --app epoch3d_lbcs [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_lbcs
+        3D lbcs
+
+###################### Particle tracking ############
+
+###################### epoch1d ######################
+
+%appinstall epoch1d_tracking
+        cp -r /$EPOCH_VERSION/epoch1d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch1d_tracking
+        echo "$1" | mpirun $SCIF_APPROOT/bin/epoch1d
+
+%apphelp epoch1d_tracking
+        EPOCH 1D compiled with particle tracking and prefetch options. Run with
+        singularity run --app epoch1d_tracking [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 1 local process.
+
+%applabels epoch1d_tracking
+        1D particle_tracking
+
+###################### epoch2d ######################
+
+%appinstall epoch2d_tracking
+        cp -r /$EPOCH_VERSION/epoch2d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch2d_tracking
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_tracking
+        EPOCH 2D compiled with particle tracking and prefetch options. Run with
+        singularity run --app epoch2d_tracking [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_tracking
+        2D particle_tracking
+
+###################### epoch3d ######################
+
+%appinstall epoch3d_tracking
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_tracking
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_tracking
+        EPOCH 3D compiled with particle tracking and prefetch options. Run with
+        singularity run --app epoch3d_tracking [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_tracking
+        3D particle_tracking
+
+%appinstall epoch3d_tracking_HC
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        sed -i 's/#DEFINES += $(D)HC_PUSH/DEFINES += $(D)HC_PUSH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_tracking_HC
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_tracking_HC
+        EPOCH 3D compiled with the Higuera-Cary push and with particle tracking and prefetch options.
+        Run with
+        singularity run --app epoch3d_tracking_HC [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_tracking_HC
+        3D particle_tracking HigueraCary_push
+
+###################### QED ##########################
+
+###################### epoch1d ######################
+
+%appinstall epoch1d_photons
+        cp -r /$EPOCH_VERSION/epoch1d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+        ln -s $SCIF_APPROOT/src/physics_packages/TABLES /epoch1d/qed_tables
+
+%apprun epoch1d_photons
+        echo "$1" | mpirun $SCIF_APPROOT/bin/epoch1d
+
+%apphelp epoch1d_photons
+        EPOCH 1D compiled with support for photon particle type. Run with
+        singularity run --app epoch1d_photons [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 1 local process.
+
+%applabels epoch1d_photons
+        1D photons
+
+###################### epoch2d ######################
+
+%appinstall epoch2d_photons
+        cp -r /$EPOCH_VERSION/epoch2d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+        ln -s $SCIF_APPROOT/src/physics_packages/TABLES /epoch2d/qed_tables
+
+%apprun epoch2d_photons
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_photons
+        EPOCH 2D compiled with support for photon particle type. Run with
+        singularity run --app epoch2d_photons [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_photons
+        2D photons
+
+%appinstall epoch2d_qed-all
+        cp -r /$EPOCH_VERSION/epoch2d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch2d_qed-all
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_qed-all
+        EPOCH 2D compiled with support for photon particle type, Bremsstrahlung processes and
+        support for virtual photons which are used by the Trident process for pair production.
+        Run with
+        singularity run --app epoch2d-qed-all [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_qed-all
+        2D photon Bremsstrahlung Trident
+
+%appinstall epoch2d_qed-all_HC
+        cp -r /$EPOCH_VERSION/epoch2d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)HC_PUSH/DEFINES += $(D)HC_PUSH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch2d_qed-all_HC
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_qed-all_HC
+        EPOCH 2D compiled with the Higuera-Cary push and with support for photon particle type,
+        Bremsstrahlung processes and support for virtual photons which are used by
+        the Trident process for pair production.
+        Run with
+        singularity run --app epoch2d_qed-all_HC [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_qed-all_HC
+        2D photon Bremsstrahlung Trident HigueraCary_push
+
+%appfiles epoch2d_qed-all_lbcs
+        epoch_lbcs
+
+%appinstall epoch2d_qed-all_lbcs
+        cp -r epoch_lbcs/* $SCIF_APPROOT
+
+        sed -i 's/DEFINES+=" -D EPOCH_3D:BOOL=ON"/DEFINES+=" -D EPOCH_3D:BOOL=OFF"/' build.sh
+        sed -i 's/DEFINES+=" -D EPOCH_2D:BOOL=OFF"/DEFINES+=" -D EPOCH_2D:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D PHOTONS:BOOL=OFF"/DEFINES+=" -D PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=OFF"/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=OFF"/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=ON"/' build.sh
+
+        ./build.sh intel
+        ln -s epoch/epoch2d/bin/epoch2d bin/epoch2d
+
+%apprun epoch2d_qed-all_lbcs
+        echo "$1" | mpirun -np 20 $SCIF_APPROOT/bin/epoch2d
+
+%apphelp epoch2d_qed-all_lbcs
+        EPOCH 2D compiled with compiled with laser boundary conditions for Gaussian beams
+        and support for photon particle type, Bremsstrahlung processes and
+        support for virtual photons which are used by the Trident process for pair production.
+        Run with
+        singularity run --app epoch2d-qed-all [container_name.sif] [folder_with_input.deck]
+
+        The runscript accepts one argument which is the folder containing the input.deck file.
+        Uses 20 local processes.
+
+%applabels epoch2d_qed-all_lbcs
+        2D photon Bremsstrahlung Trident lbcs
+
+###################### epoch3d ######################
+
+%appinstall epoch3d_photons
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+        ln -s $SCIF_APPROOT/src/physics_packages/TABLES /epoch3d/qed_tables
+
+%apprun epoch3d_photons
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_photons
+        EPOCH 3D compiled with support for photon particle type. Run with
+        singularity run --app epoch3d_photons [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_photons
+        3D photons
+
+%appinstall epoch3d_photons_tracking
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_photons_tracking
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_photons_tracking
+        EPOCH 3D compiled with support for photon particle type and particle tracking and prefetch options.
+        Run with
+        singularity run --app epoch3d_photons_tracking [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_photons_tracking
+        3D photons particle_tracking
+
+%appinstall epoch3d_qed-all
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_qed-all
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all
+        EPOCH 3D compiled with support for photon particle type, Bremsstrahlung processes and
+        support for virtual photons which are used by the Trident process for pair production.
+        Run with
+        singularity run --app epoch3d_qed-all [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all
+        3D photons Bremsstrahlung Trident
+
+%appinstall epoch3d_qed-all_HC
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)HC_PUSH/DEFINES += $(D)HC_PUSH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_qed-all_HC
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all_HC
+        EPOCH 3D compiled with the Higuera-Cary push and with support for photon particle type,
+        Bremsstrahlung processes and support for virtual photons which are used by
+        the Trident process for pair production.
+        Run with
+        singularity run --app epoch3d_qed-all_HC [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all_HC
+        3D photons Bremsstrahlung Trident HigueraCary_push
+
+%appinstall epoch3d_qed-all_tracking
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_qed-all_tracking
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all_tracking
+        EPOCH 3D compiled with support for photon particle type, Bremsstrahlung processes,
+        support for virtual photons which are used by the Trident process for pair production
+        and particle tracking and prefetch options.
+        Run with
+        singularity run --app epoch3d_qed-all_tracking [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all_tracking
+        3D photons Bremsstrahlung Trident particle_tracking
+
+%appinstall epoch3d_qed-all_tracking_HC
+        cp -r /$EPOCH_VERSION/epoch3d/* $SCIF_APPROOT
+        cd $SCIF_APPROOT
+        sed -i 's/#DEFINES += $(D)PHOTONS/DEFINES += $(D)PHOTONS/g' Makefile
+        sed -i 's/#DEFINES += $(D)BREMSSTRAHLUNG/DEFINES += $(D)BREMSSTRAHLUNG/g' Makefile
+        sed -i 's/#DEFINES += $(D)TRIDENT_PHOTONS/DEFINES += $(D)TRIDENT_PHOTONS/g' Makefile
+        sed -i '0,/#DEFINES += $(D)PARTICLE_ID/s//DEFINES += $(D)PARTICLE_ID/' Makefile
+        sed -i 's/#DEFINES += $(D)PREFETCH/DEFINES += $(D)PREFETCH/' Makefile
+        sed -i 's/#DEFINES += $(D)HC_PUSH/DEFINES += $(D)HC_PUSH/' Makefile
+        make -j $(nproc) COMPILER=intel MPIF90=mpiifort
+        chmod --recursive +rx $SCIF_APPROOT
+
+%apprun epoch3d_qed-all_tracking_HC
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all_tracking_HC
+        EPOCH 3D compiled with the Higuera-Cary push, with support for photon particle type,
+        Bremsstrahlung processes, support for virtual photons which are used by
+        the Trident process for pair production and with particle tracking and prefetch options.
+        Run with
+        singularity run --app epoch3d_qed-all_tracking_HC [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all_tracking_HC
+        3D photons Bremsstrahlung Trident particle_tracking HigueraCary_push
+
+%appfiles epoch3d_qed-all_lbcs
+        epoch_lbcs
+
+%appinstall epoch3d_qed-all_lbcs
+        cd epoch_lbcs
+
+        sed -i 's/DEFINES+=" -D PHOTONS:BOOL=OFF"/DEFINES+=" -D PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=OFF"/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=OFF"/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=ON"/' build.sh
+
+        ./build.sh intel
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/bin/epoch3d $SCIF_APPROOT/bin/epoch3d
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/src $SCIF_APPROOT/src
+
+%apprun epoch3d_qed-all_lbcs
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all_lbcs
+        EPOCH 3D compiled with laser boundary conditions for Gaussian beams. Run with
+        singularity run --app epoch3d_qed-all_lbcs [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all_lbcs
+        3D photons Bremsstrahlung Trident lbcs
+
+%appfiles epoch3d_qed-all_tracking_lbcs
+        epoch_lbcs
+
+%appinstall epoch3d_qed-all_tracking_lbcs
+        cd epoch_lbcs
+
+        sed -i 's/DEFINES+=" -D PARTICLE_ID:BOOL=OFF"/DEFINES+=" -D PARTICLE_ID:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D PHOTONS:BOOL=OFF"/DEFINES+=" -D PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=OFF"/DEFINES+=" -D TRIDENT_PHOTONS:BOOL=ON"/' build.sh
+        sed -i 's/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=OFF"/DEFINES+=" -D BREMSSTRAHLUNG:BOOL=ON"/' build.sh
+
+        ./build.sh intel
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/bin/epoch3d $SCIF_APPROOT/bin/epoch3d
+        ln -s $SCIF_APPROOT/epoch_lbcs/epoch/epoch3d/src $SCIF_APPROOT/src
+
+%apprun epoch3d_qed-all_tracking_lbcs
+        echo "$1" | mpirun -launcher-exec /usr/local/bin/ssh_wrapper -hostfile "$2" -np 40 $SCIF_APPROOT/bin/epoch3d
+
+%apphelp epoch3d_qed-all_tracking_lbcs
+        EPOCH 3D compiled with laser boundary conditions for Gaussian beams. Run with
+        singularity run --app epoch3d_qed-all_tracking_lbcs [container_name.sif] [folder_with_input.deck] [hostfile]
+
+        The runscript accepts two arguments which specify the folder containing the input.deck file and the hostfile.
+        Uses 40 processes on the machines specified in the hostfile.
+
+%applabels epoch3d_qed-all_tracking_lbcs
+        3D photons Bremsstrahlung Trident particle_tracking lbcs

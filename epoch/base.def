@@ -1,0 +1,48 @@
+BootStrap: library
+From: centos:7
+
+%setup
+        cp -r /opt/intel ${SINGULARITY_ROOTFS}/opt
+
+%files
+        epoch-4.17.10.tar.gz
+
+%post
+        EPOCH_VERSION=epoch-4.17.10
+        yum -y update
+        yum -y group install "Development Tools"
+        yum -y install wget tar gzip git man-db man-pages man gcc-gfortran which
+		# MPI benchmarks deps
+		yum -y install libfabric
+        # Python deps
+        yum -y install tcl tk
+
+        # CMake
+        wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0.tar.gz
+        tar zxvf cmake-3.*
+        cd cmake-3.14.0
+        ./bootstrap --prefix=/usr/local
+        make -j$(nproc)
+        make install
+        cmake --version
+
+        cd /
+        tar -xzf $EPOCH_VERSION.tar.gz
+        COMPILERVARS_ARCHITECTURE=intel64 COMPILERVARS_PLATFORM=linux . /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh
+		ifort --version
+
+        PATH=/opt/intel/intelpython3/bin/:$PATH
+        cd /$EPOCH_VERSION/epoch1d
+        make sdfutils
+        echo "/root/.local/lib/python3.6/site-packages" > /opt/intel/intelpython3/lib/python3.6/site-packages/sdf.pth
+        chmod --recursive o+rx /root/.local
+		chmod --recursive o+rx /root
+		ls -lah /root/.local
+
+		pip install postpic h5py
+
+%environment
+        export LC_ALL=C
+        . /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh -arch intel64 -platform linux
+		PATH=/opt/intel/intelpython3/bin/:$PATH
+        PATH=/usr/local/visit/bin:$PATH

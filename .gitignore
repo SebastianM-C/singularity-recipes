@@ -1,4 +1,7 @@
 *.nfs000*
 *.sif
+*.sif.2
 *.tar.gz
 *.tgz
+epoch/epoch_lbcs
+epoch/epoch.zip

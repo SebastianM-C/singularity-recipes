@@ -1,0 +1,74 @@
+BootStrap: localimage
+From: base.sif
+
+%post
+        EPOCH_VERSION=epoch-4.17.10
+		VTK_VERSION=8.2.0
+		VTK_V=8.2
+		PATH=/opt/intel/intelpython3/bin/:$PATH
+
+		yum -y install dnf-plugins-core
+		yum -y install epel-release
+		yum -y install --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+		# yum config-manager --set-enabled PowerTools
+
+        # VisIt deps
+		yum -y install openssh libicu libXext mesa-libGLU libSM libXrender \
+			qt5-qtbase qt5-qtbase-gui qt5-qtx11extras \
+			libxkbcommon xcb-util libXtst glew-devel glfw glfw-devel \
+			xterm
+		# FFMPEG
+		yum --enablerepo=rpmfusion-* -y install ffmpeg ffmpeg-devel
+        # Debug
+        yum -y install strace mlocate
+		# VTK deps
+		yum -y install mesa-libGL mesa-libGL-devel libXt-devel
+		wget https://www.vtk.org/files/release/$VTK_V/VTK-$VTK_VERSION.tar.gz
+		tar -xvf VTK-$VTK_VERSION.tar.gz
+		cd VTK-$VTK_VERSION
+		mkdir build
+		cd build
+		cmake ../ -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING:BOOL=OFF -DCMAKE_BUILD_TYPE=Release \
+			-DPYTHON_INCLUDE_DIRS:PATH=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  \
+			-DPYTHON_LIBRARY:PATH=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR')+'/'+sysconfig.get_config_var('LDLIBRARY'))") \
+			-DPYTHON_EXECUTABLE:FILEPATH=`which python` \
+			-DVTK_PYTHON_VERSION=3 -DVTK_WRAP_PYTHON=ON
+		make -j$(nproc)
+		make install
+		echo "/usr/local/lib/python3.6/site-packages" > /opt/intel/intelpython3/lib/python3.6/site-packages/vtk.pth
+		LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+		# Cleanup
+		cd /
+		rm -rf VTK-$VTK_VERSION
+		rm VTK-$VTK_VERSION.tar.gz
+		# VirtualGL
+		cd /etc/yum.repos.d/
+		wget https://virtualgl.org/pmwiki/uploads/Downloads/VirtualGL.repo
+		yum -y update
+		yum -y install glx-utils mesa-dri-drivers VirtualGL
+
+###################### VisIt ######################
+
+%appinstall visit
+        cd /
+		VISITVERSION=3.1.1
+		VISIT_VERSION=3_1_1
+		#VISITVERSION=2.13.3
+		#VISIT_VERSION=2_13_3
+
+        wget https://github.com/visit-dav/visit/releases/download/v$VISITVERSION/visit-install$VISIT_VERSION
+        chmod 755 visit-install$VISIT_VERSION
+		wget https://github.com/visit-dav/visit/releases/download/v$VISITVERSION/visit$VISIT_VERSION.linux-x86_64-rhel7-wmesa.tar.gz
+        ./visit-install$VISIT_VERSION -c none $VISITVERSION linux-x86_64-rhel7-wmesa /usr/local/visit
+        PATH=/usr/local/visit/bin:$PATH
+        cd /$EPOCH_VERSION/SDF/VisIt
+        ./build -p
+		# Cleanup
+		cd /
+		rm visit$VISIT_VERSION.linux-x86_64-rhel7-wmesa.tar.gz
+
+%apprun visit
+        exec /usr/local/visit/bin/visit "$@"
+
+%environment
+		LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
