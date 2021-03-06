@@ -8,11 +8,11 @@ From: julia:1.5
 
 %runscript
  	export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
- 	exec -B /mnt/storage,/usr/local/cuda /usr/local/julia/bin/julia -O 3 "$@"
+ 	exec /usr/local/julia/bin/julia -O 3 "$@"
 
 %post
 	apt update
-	apt install -y wget ssh vim gnupg apt-utils gcc gdb strace
+	apt install -y wget ssh vim git gnupg apt-utils gcc gdb strace
 
 	apt install -y python3 python3-pip \
 		zlib1g hdf5-tools libcairo2 pdf2svg\
