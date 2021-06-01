@@ -1,0 +1,15 @@
+Bootstrap: docker
+From: ubuntu
+
+%post
+	apt update
+  	# LaTeX
+	apt install -y texlive-latex-base \
+		texlive-latex-recommended \
+		texlive-luatex \
+		texlive-xetex \
+		texlive-latex-extra \
+		texlive-generic-extra \
+		texlive-science
+
+	apt clean
