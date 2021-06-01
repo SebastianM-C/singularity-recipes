@@ -1,0 +1,28 @@
+Bootstrap: docker
+From: julia:1.6
+
+%environment
+	export JULIA_DEPOT_PATH=/mnt/storage/$(id -un)/.julia
+ 	export GKSwstype=svg
+	export GKS_ENCODING="utf-8"
+
+%runscript
+ 	export JULIA_NUM_THREADS="$(( `nproc` / 2 ))"
+ 	exec /usr/local/julia/bin/julia -O 3 "$@"
+
+%post
+	apt update
+	apt install -y wget ssh vim git gnupg apt-utils gcc gdb strace
+
+	apt install -y zlib1g libcairo2 pdf2svg\
+		libczmq-dev dvipng libxt6 libxrender1 \
+		mesa-utils libxrandr-dev libxinerama-dev libxcursor-dev \
+		libgl1-mesa-glx libqt5widgets5 gettext gettext-base
+
+	# VirtualGL
+	VGL_VERSION=2.6.5
+	wget https://sourceforge.net/projects/virtualgl/files/"$VGL_VERSION"/virtualgl_"$VGL_VERSION"_amd64.deb
+	dpkg -i virtualgl_"$VGL_VERSION"_amd64.deb
+	rm virtualgl_"$VGL_VERSION"_amd64.deb
+
+    apt clean
