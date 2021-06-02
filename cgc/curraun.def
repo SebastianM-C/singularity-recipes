@@ -19,6 +19,15 @@ From: ubuntu:20.04
 	wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh -O ~/anaconda.sh
 	bash ~/anaconda.sh -b -p /opt/anaconda
 
+	# LaTeX
+	apt install -y texlive-latex-base \
+		texlive-latex-recommended \
+		texlive-luatex \
+		texlive-xetex \
+		texlive-latex-extra \
+		texlive-generic-extra \
+		texlive-science
+
 	apt clean
 
 	export PATH=/opt/anaconda/bin:$PATH
