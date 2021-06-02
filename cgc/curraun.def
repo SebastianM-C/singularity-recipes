@@ -25,7 +25,6 @@ From: ubuntu:20.04
 		texlive-luatex \
 		texlive-xetex \
 		texlive-latex-extra \
-		texlive-generic-extra \
 		texlive-science
 
 	apt clean
